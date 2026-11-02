@@ -146,6 +146,7 @@ form { margin: 0; }
 .pill-green { color: var(--pine); background: var(--pine-tint); }
 .pill-red { color: var(--rose-ink); background: var(--rose-bg); }
 .pill-grey { color: var(--body); background: var(--grey-pill); }
+.pill-amber { color: #7a4b00; background: #fbefd9; }
 .pill-solid { color: #fff; background: var(--pine); }
 .pill.lg { font-size: 14px; padding: 8px 14px; }
 .claim-btn {
@@ -156,7 +157,10 @@ form { margin: 0; }
 
 /* ---------- Table ---------- */
 .table-box { overflow-x: auto; border: 1px solid var(--line-soft); border-radius: 12px; }
-.table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 15px; }
+.table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.table .pill { white-space: nowrap; }
+.table .name-form { min-width: 150px; }
+.table .email { color: var(--body); font-size: 14px; overflow-wrap: anywhere; }
 .table th { background: var(--surface-2); text-align: left; padding: 12px 14px; font-size: 13px; font-weight: 600; color: var(--body); }
 .table td { padding: 10px 14px; border-top: 1px solid var(--line-soft); vertical-align: middle; }
 
@@ -171,10 +175,9 @@ form { margin: 0; }
 .name-save { display: none; height: 36px; padding: 0 12px; font-size: 14px; }
 .name-form:focus-within .name-save { display: inline-flex; }
 
-.invite-bar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
-  background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 12px; padding: 14px 16px;
-}
+.row-actions { white-space: nowrap; text-align: right; }
+.row-actions form { display: inline-flex; vertical-align: middle; }
+.row-actions form + form { margin-left: 4px; }
 
 .notice { background: var(--pine-tint); color: var(--pine-dark); border-radius: 12px; padding: 14px 18px; font-weight: 500; }
 .error { color: var(--rose-ink); background: var(--rose-bg); border-radius: 10px; padding: 12px 14px; font-size: 14px; }
@@ -200,12 +203,19 @@ form { margin: 0; }
 
   /* Organizer table becomes a stack of rows */
   .table { min-width: 0; }
+  .table .name-form { min-width: 0; }
   .table thead { display: none; }
   .table, .table tbody, .table tr, .table td { display: block; }
-  .table tr { position: relative; padding: 12px 56px 12px 14px; border-top: 1px solid var(--line-soft); }
+  .table tr { padding: 12px 14px; border-top: 1px solid var(--line-soft); }
   .table tbody tr:first-child { border-top: 0; }
   .table td { border: 0; padding: 2px 0; }
-  .table td:last-child:not(:nth-child(3)) { position: absolute; top: 8px; right: 6px; width: auto; padding: 0; }
+  .table .row-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 8px; text-align: left; }
+  .table .row-actions:empty { display: none; }
+  /* Only the remove button: tuck it into the card's corner instead of its own line */
+  .table tr { position: relative; }
+  .table tr:has(.row-actions > form:only-child) { padding-right: 52px; }
+  .table .row-actions:has(> form:only-child) { position: absolute; top: 8px; right: 6px; padding: 0; }
+  .row-actions form:last-child { margin-left: auto; }
 }
 
 @media (max-width: 560px) {

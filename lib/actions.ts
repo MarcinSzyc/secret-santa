@@ -330,30 +330,24 @@ export async function resetDraw(): Promise<void> {
   back("Losowanie cofnięte. Możesz zmienić listę i losować od nowa.");
 }
 
-export async function sendInvites(): Promise<void> {
+export async function sendInvite(formData: FormData): Promise<void> {
   const admin = await requireAdmin();
+  const id = objectId(formData, "userId");
   if (await getDrawnAt()) back("Losowanie już się odbyło — wszyscy dostali maila z wynikiem.");
   const { users } = await db();
-  const pending = await users.find({ lastLoginAt: null, _id: { $ne: admin._id } }).toArray();
-  if (pending.length === 0) back("Wszyscy już się zalogowali — nie ma kogo zapraszać.");
+  const person = id && (await users.findOne({ _id: id }));
+  if (!person) back("Nie znaleziono osoby.");
+  if (person.lastLoginAt) back(`${person.name} już się zalogował(a) — zaproszenie niepotrzebne.`);
   const base = await appUrl();
-  const event = await getEvent();
-  let sent = 0;
-  for (const person of pending) {
-    try {
-      const token = await createLoginToken(person._id, INVITE_TOKEN_DAYS * 24 * 60);
-      await sendMail(person.email, inviteMail(person.name, admin.name, `${base}/api/auth/verify?token=${token}`, base, event));
-      await users.updateOne({ _id: person._id }, { $set: { invitedAt: new Date() } });
-      sent++;
-    } catch (err) {
-      console.error(`Nie wysłano zaproszenia do ${person.email}`, err);
-    }
+  try {
+    const token = await createLoginToken(person._id, INVITE_TOKEN_DAYS * 24 * 60);
+    await sendMail(person.email, inviteMail(person.name, admin.name, `${base}/api/auth/verify?token=${token}`, base, await getEvent()));
+  } catch (err) {
+    console.error(`Nie wysłano zaproszenia do ${person.email}`, err);
+    back(`Nie udało się wysłać zaproszenia do ${person.email}. Sprawdź adres i spróbuj ponownie.`);
   }
-  back(
-    sent === pending.length
-      ? `Wysłano zaproszenia: ${sent}.`
-      : `Wysłano zaproszenia: ${sent} z ${pending.length}. Sprawdź adresy pozostałych osób.`,
-  );
+  await users.updateOne({ _id: person._id }, { $set: { invitedAt: new Date() } });
+  back(`Wysłano zaproszenie: ${person.name} (${person.email}).`);
 }
 
 export async function sendReminders(): Promise<void> {

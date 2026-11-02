@@ -8,7 +8,7 @@ import {
   resetDraw,
   runDraw,
   saveSettings,
-  sendInvites,
+  sendInvite,
   sendReminders,
 } from "@/lib/actions";
 import { INVITE_TOKEN_DAYS } from "@/lib/auth";
@@ -18,13 +18,17 @@ import { CheckIcon, XIcon } from "@/components/icons";
 // Drawing sends one e-mail per person, which can take a while over Gmail SMTP.
 export const maxDuration = 60;
 
-function listLabel(count: number, loggedIn: boolean, invitedAt?: Date | null): { text: string; tone: string } {
-  if (count > 0) return { text: plural(count, "pozycja", "pozycje", "pozycji"), tone: "pill-green" };
-  if (loggedIn) return { text: "Pusta lista", tone: "pill-red" };
-  if (invitedAt) {
-    return { text: `Zaproszenie wysłane ${invitedAt.toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}`, tone: "pill-grey" };
+function statusLabel(count: number, loggedIn: boolean, invitedAt?: Date | null): { text: string; tone: string } {
+  if (loggedIn) {
+    return count > 0
+      ? { text: `Lista: ${plural(count, "pozycja", "pozycje", "pozycji")}`, tone: "pill-green" }
+      : { text: "Dołączył(a) · pusta lista", tone: "pill-red" };
   }
-  return { text: "Jeszcze się nie zalogował(a)", tone: "pill-red" };
+  if (invitedAt) {
+    const day = invitedAt.toLocaleDateString("pl-PL", { day: "numeric", month: "short" });
+    return { text: `Wysłane ${day} · nieprzyjęte`, tone: "pill-amber" };
+  }
+  return { text: "Niezaproszony(a)", tone: "pill-grey" };
 }
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
@@ -37,7 +41,6 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   ]);
   const { drawnAt } = event;
   const joined = people.filter((p) => p.lastLoginAt).length;
-  const toInvite = people.filter((p) => !p.lastLoginAt && !p._id.equals(me._id)).length;
 
   return (
     <>
@@ -74,14 +77,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               <thead>
                 <tr>
                   <th scope="col">Osoba</th>
-                  <th scope="col">E-mail</th>
-                  <th scope="col">Lista życzeń</th>
+                  <th scope="col">Status</th>
                   {!drawnAt && <th scope="col"><span className="sr-only">Akcje</span></th>}
                 </tr>
               </thead>
               <tbody>
                 {people.map((p) => {
-                  const label = listLabel(p.wishlist?.length ?? 0, !!p.lastLoginAt, p.invitedAt);
+                  const label = statusLabel(p.wishlist?.length ?? 0, !!p.lastLoginAt, p.invitedAt);
+                  const isMe = p._id.equals(me._id);
                   return (
                     <tr key={p._id.toString()}>
                       <td>
@@ -91,12 +94,20 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                           <input id={`name-${p._id}`} name="name" required maxLength={80} defaultValue={p.name} className="name-input" title="Kliknij, żeby zmienić imię" />
                           <button type="submit" className="btn sm name-save">Zapisz</button>
                         </form>
+                        <div className="email">{p.email}</div>
                       </td>
-                      <td style={{ color: "var(--body)" }}>{p.email}</td>
                       <td><span className={`pill ${label.tone}`}>{label.text}</span></td>
                       {!drawnAt && (
-                        <td style={{ width: 52 }}>
-                          {!p._id.equals(me._id) && (
+                        <td className="row-actions">
+                          {!isMe && !p.lastLoginAt && (
+                            <form action={sendInvite}>
+                              <input type="hidden" name="userId" value={p._id.toString()} />
+                              <ConfirmButton className={`btn sm ${p.invitedAt ? "btn-outline" : ""}`} pendingLabel="Wysyłam…">
+                                {p.invitedAt ? "Wyślij ponownie" : "Zaproś mailem"}
+                              </ConfirmButton>
+                            </form>
+                          )}
+                          {!isMe && (
                             <form action={removeParticipant}>
                               <input type="hidden" name="userId" value={p._id.toString()} />
                               <ConfirmButton className="icon-btn" confirm={`Usunąć ${p.name} z listy?`} pendingLabel="…">
@@ -113,22 +124,9 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               </tbody>
             </table>
           </div>
-          {!drawnAt && toInvite > 0 && (
-            <form action={sendInvites} className="invite-bar">
-              <ConfirmButton
-                className="btn sm"
-                confirm={`Wysłać zaproszenie mailem do ${plural(toInvite, "osoby", "osób", "osób")}, które jeszcze się nie zalogowały?`}
-                pendingLabel="Wysyłam…"
-              >
-                Wyślij zaproszenia ({toInvite})
-              </ConfirmButton>
-              <p className="muted" style={{ flex: "1 1 260px" }}>
-                Mail z przyciskiem logowania (ważnym {INVITE_TOKEN_DAYS} dni) dostaną osoby, które jeszcze się nie zalogowały.
-              </p>
-            </form>
-          )}
           <p className="muted">
-            Ty też jesteś na liście i bierzesz udział w losowaniu. Imię zmienisz, klikając je w tabeli.
+            „Zaproś mailem” wysyła wiadomość z przyciskiem, który od razu loguje (ważnym {INVITE_TOKEN_DAYS} dni). Status zmieni się na
+            zielony, gdy osoba dołączy. Ty też jesteś na liście i bierzesz udział w losowaniu. Imię zmienisz, klikając je w tabeli.
           </p>
         </section>
 

@@ -16,7 +16,7 @@ Stack: **Next.js 16** (App Router, Server Actions) · **MongoDB** · **Nodemaile
 1. Logujesz się adresem z `ADMIN_EMAILS` — organizator może się zalogować, zanim ktokolwiek jest na liście.
 2. W zakładce **Organizator** ustawiasz **budżet** (na prezent Secret Santa i osobno na prezent dla dziecka) oraz datę wymiany — wszyscy widzą je w aplikacji i w mailu po losowaniu. Można je zmienić w każdej chwili.
 3. Tam też dodajesz uczestników (imię + e-mail). Siebie też — wpisz swoje imię i ten sam e-mail, żeby nadpisać domyślną nazwę.
-4. Klikasz **Wyślij zaproszenia** — każda osoba, która jeszcze się nie zalogowała, dostaje maila z przyciskiem, który od razu ją loguje (ważny 14 dni). Możesz to powtórzyć dla spóźnialskich. Można też po prostu wysłać ludziom adres strony — zalogują się mailem, który dla nich wpisałeś. W tabeli widzisz, kto już się zalogował, komu poszło zaproszenie i ile kto ma pozycji na liście.
+4. Przy każdej osobie klikasz **Zaproś mailem** — dostaje maila z przyciskiem, który od razu ją loguje (ważny 14 dni). Status pokazuje „Wysłane … · nieprzyjęte”, dopóki się nie zaloguje; wtedy możesz **Wyślij ponownie**. Można też po prostu wysłać ludziom adres strony — zalogują się mailem, który dla nich wpisałeś. W tabeli widzisz, kto już się zalogował, komu poszło zaproszenie i ile kto ma pozycji na liście.
 5. Klikasz **Losuj pary**. Lista uczestników się zamyka, każdy dostaje maila, a w aplikacji zamiast „Losowanie jeszcze przed nami” pojawia się wylosowana osoba i jej lista.
 6. Po losowaniu możesz wysłać **przypomnienie** do osób z pustą listą albo **cofnąć losowanie** (np. gdy trzeba dopisać spóźnialskiego) i wylosować ponownie.
 
