@@ -1,0 +1,151 @@
+import { requireAdmin } from "@/lib/auth";
+import { db, getDrawnAt } from "@/lib/db";
+import { plural } from "@/lib/format";
+import { addParticipant, removeParticipant, resetDraw, runDraw, sendReminders } from "@/lib/actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { CheckIcon, XIcon } from "@/components/icons";
+
+// Drawing sends one e-mail per person, which can take a while over Gmail SMTP.
+export const maxDuration = 60;
+
+function listLabel(count: number, loggedIn: boolean): { text: string; ok: boolean } {
+  if (count > 0) return { text: plural(count, "pozycja", "pozycje", "pozycji"), ok: true };
+  return { text: loggedIn ? "Pusta lista" : "Jeszcze się nie zalogował(a)", ok: false };
+}
+
+export default async function AdminPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
+  const me = await requireAdmin();
+  const { msg } = await searchParams;
+  const { users } = await db();
+  const [people, drawnAt] = await Promise.all([
+    users.find({}, { projection: { name: 1, email: 1, wishlist: 1, lastLoginAt: 1 } }).sort({ name: 1 }).toArray(),
+    getDrawnAt(),
+  ]);
+  const joined = people.filter((p) => p.lastLoginAt).length;
+
+  return (
+    <>
+      <div className="stack-sm">
+        <h1 className="page-title">Organizator</h1>
+        <p className="lead">Dodaj uczestników po e-mailu, a gdy wszyscy będą gotowi — uruchom losowanie.</p>
+      </div>
+
+      {msg && <p className="notice" role="status">{msg}</p>}
+
+      <div className="row">
+        <section aria-labelledby="uczestnicy" className="card stack" style={{ flex: "999 1 560px", minWidth: 0, padding: 28 }}>
+          <div className="spread" style={{ alignItems: "baseline" }}>
+            <h2 id="uczestnicy" className="h2">Uczestnicy</h2>
+            <span className="body">{plural(people.length, "osoba", "osoby", "osób")} · {joined} zalogowanych</span>
+          </div>
+
+          {!drawnAt && (
+            <form action={addParticipant} style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "flex-end" }}>
+              <div className="stack-sm" style={{ flex: "1 1 180px", minWidth: 0 }}>
+                <label htmlFor="p-name" className="label">Imię i nazwisko</label>
+                <input id="p-name" name="name" required maxLength={80} placeholder="Jan Kowalski" className="input sm" />
+              </div>
+              <div className="stack-sm" style={{ flex: "1 1 220px", minWidth: 0 }}>
+                <label htmlFor="p-email" className="label">E-mail</label>
+                <input id="p-email" name="email" type="email" required placeholder="jan@example.com" className="input sm" />
+              </div>
+              <button type="submit" className="btn btn-outline sm">Dodaj osobę</button>
+            </form>
+          )}
+
+          <div className="table-box">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th scope="col">Osoba</th>
+                  <th scope="col">E-mail</th>
+                  <th scope="col">Lista życzeń</th>
+                  {!drawnAt && <th scope="col"><span className="sr-only">Akcje</span></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {people.map((p) => {
+                  const label = listLabel(p.wishlist?.length ?? 0, !!p.lastLoginAt);
+                  return (
+                    <tr key={p._id.toString()}>
+                      <td style={{ fontWeight: 500 }}>{p.name}</td>
+                      <td style={{ color: "var(--body)" }}>{p.email}</td>
+                      <td><span className={`pill ${label.ok ? "pill-green" : "pill-red"}`}>{label.text}</span></td>
+                      {!drawnAt && (
+                        <td style={{ width: 52 }}>
+                          {!p._id.equals(me._id) && (
+                            <form action={removeParticipant}>
+                              <input type="hidden" name="userId" value={p._id.toString()} />
+                              <ConfirmButton className="icon-btn" confirm={`Usunąć ${p.name} z listy?`} pendingLabel="…">
+                                <XIcon />
+                                <span className="sr-only">Usuń {p.name}</span>
+                              </ConfirmButton>
+                            </form>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="muted">
+            Ty też jesteś na liście i bierzesz udział w losowaniu. Żeby zmienić swoje imię, dodaj się ponownie z tym samym e-mailem.
+          </p>
+        </section>
+
+        <section aria-labelledby="losowanie" className="card-dark stack" style={{ flex: "1 1 320px", minWidth: 0, padding: 28, gap: 16 }}>
+          <h2 id="losowanie" className="h2">Losowanie</h2>
+          {!drawnAt ? (
+            <>
+              <p className="on-dark" style={{ fontSize: 15 }}>
+                Aplikacja przypisze każdej osobie kogoś innego — nikt nie wylosuje siebie, a pary tworzą jedno zamknięte koło.
+              </p>
+              <form action={runDraw}>
+                <ConfirmButton
+                  className="btn btn-light block"
+                  confirm={`Losujemy pary dla ${people.length} osób i wysyłamy wszystkim maila. Kontynuować?`}
+                  pendingLabel="Losuję i wysyłam maile…"
+                >
+                  Losuj pary ({plural(people.length, "osoba", "osoby", "osób")})
+                </ConfirmButton>
+              </form>
+              <p className="on-dark" style={{ fontSize: 14 }}>
+                Po losowaniu lista uczestników zostaje zamknięta, a każdy dostanie e-mail z linkiem do aplikacji.
+              </p>
+            </>
+          ) : (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 600 }}>
+                <CheckIcon />
+                <span>Losowanie zakończone {drawnAt.toLocaleDateString("pl-PL", { day: "numeric", month: "long" })}</span>
+              </div>
+              <p className="on-dark" style={{ fontSize: 15 }}>
+                Każdy widzi już swoją osobę po zalogowaniu. Pary są tajne — nawet organizator ich nie widzi.
+              </p>
+              <form action={sendReminders}>
+                <ConfirmButton
+                  className="btn btn-ghost-light block"
+                  confirm="Wysłać maila do osób, które mają pustą listę życzeń?"
+                  pendingLabel="Wysyłam…"
+                >
+                  Przypomnij o pustych listach
+                </ConfirmButton>
+              </form>
+              <form action={resetDraw}>
+                <ConfirmButton
+                  className="link-btn on-dark"
+                  confirm="Cofnąć losowanie? Wszystkie pary zostaną skasowane, a ludzie mogli już zacząć kupować prezenty."
+                  pendingLabel="Cofam…"
+                >
+                  Cofnij losowanie
+                </ConfirmButton>
+              </form>
+            </>
+          )}
+        </section>
+      </div>
+    </>
+  );
+}
