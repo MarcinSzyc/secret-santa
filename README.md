@@ -7,6 +7,8 @@ Prosta aplikacja do losowania Secret Santa dla kilku–kilkunastu osób.
 - **Lista życzeń** — każdy dopisuje po kolei, co chce dostać (link albo opis). Widzi ją tylko osoba, która go wylosowała.
 - **Dzieci** — każdy może dodać swoje dziecko z listą prezentów. Listy dzieci są publiczne, a przy każdym prezencie można kliknąć „Kupuję to” — wtedy wszyscy widzą, kto go kupuje.
 - **Maile** — zaproszenie, link logowania, powiadomienie po losowaniu i przypomnienie o pustej liście (wysyłane z Gmaila).
+- **Jak to działa** — zwijana sekcja na stronie głównej, która tłumaczy zasady (budżety z dziećmi / bez dzieci, prezenty dla dzieci, kto widzi listę) na podstawie ustawień organizatora.
+- **Tryb ciemny** (domyślnie jak w systemie, przełącznik w nagłówku) i **efekty świąteczne** — padający śnieg i fajerwerki, gdy po losowaniu pierwszy raz widzisz swoją osobę. Efekty wyłącza przełącznik z płatkiem śniegu; wybór zapamiętuje przeglądarka, a przy systemowym „ograniczeniu ruchu” są domyślnie wyłączone.
 - Działa i wygląda dobrze na telefonie.
 
 Stack: **Next.js 16** (App Router, Server Actions) · **MongoDB** · **Nodemailer + Gmail SMTP** · hosting na **Vercelu**.

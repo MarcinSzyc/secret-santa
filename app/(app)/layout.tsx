@@ -3,8 +3,9 @@ import { requireUser } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/config";
 import { initials } from "@/lib/format";
 import { logout } from "@/lib/actions";
-import { GiftIcon } from "@/components/icons";
+import { SantaLogo } from "@/components/SantaLogo";
 import { Nav } from "@/components/Nav";
+import { EffectsToggle, ThemeToggle } from "@/components/PrefToggles";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +16,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <header className="header">
         <div className="header-inner">
           <Link href="/" className="brand">
-            <GiftIcon />
+            <SantaLogo />
             <span>Secret Santa</span>
           </Link>
           <Nav isAdmin={isAdminEmail(user.email)} />
           <div className="who">
+            <div className="prefs">
+              <EffectsToggle />
+              <ThemeToggle />
+            </div>
             <span className="avatar" aria-hidden="true">{initials(user.name)}</span>
             <span className="who-name">{user.name}</span>
             <form action={logout}>

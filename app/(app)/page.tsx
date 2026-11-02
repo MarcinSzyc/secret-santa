@@ -2,8 +2,10 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { db, getEvent, giftBudget } from "@/lib/db";
-import { budgetLines, firstName, initials, money, plural, zl } from "@/lib/format";
+import { firstName, initials, money, plural, zl } from "@/lib/format";
 import { addChild, addChildGift, addWish, removeChild, removeChildGift, removeWish } from "@/lib/actions";
+import { Fireworks } from "@/components/Fireworks";
+import { HowItWorks } from "@/components/HowItWorks";
 import { WishText } from "@/components/WishText";
 import { XIcon } from "@/components/icons";
 
@@ -21,7 +23,6 @@ export default async function PanelPage() {
     plural(participantCount, "uczestnik", "uczestników", "uczestników"),
     event.exchangeDate && `wymiana: ${event.exchangeDate}`,
   ].filter(Boolean);
-  const budgets = budgetLines(event);
   const drawnAt = event.drawnAt;
   const receiverBudget = receiver ? giftBudget(event, receiver) : null;
 
@@ -30,19 +31,22 @@ export default async function PanelPage() {
       <div className="stack-sm">
         <h1 className="page-title">Cześć, {firstName(me.name)}</h1>
         <p className="lead">{meta.join(" · ")}</p>
-        {budgets.length > 0 && <p className="body">{budgets.join(" · ")}</p>}
       </div>
+
+      {/* Before the draw the rules lead; afterwards "who did I draw" comes first. */}
+      {!drawnAt && <HowItWorks event={event} open />}
 
       <div className="row">
         <section aria-labelledby="los" className="card-dark col stack">
           <p id="los" className="eyebrow">Twój los</p>
           {drawnAt && receiver ? (
             <>
+              <Fireworks id={drawnAt.toISOString()} />
               <div className="stack-sm" style={{ gap: 4 }}>
                 <p className="on-dark">Kupujesz prezent dla</p>
                 <h2 className="big-name">{receiver.name}</h2>
                 {receiverBudget != null && (
-                  <p className="pill lg" style={{ alignSelf: "flex-start", marginTop: 8, background: "#fff", color: "var(--pine)" }}>
+                  <p className="pill lg pill-on-fill" style={{ alignSelf: "flex-start", marginTop: 8 }}>
                     Budżet na prezent: {zl(receiverBudget)}
                   </p>
                 )}
@@ -107,6 +111,8 @@ export default async function PanelPage() {
           )}
         </section>
       </div>
+
+      {drawnAt && <HowItWorks event={event} open={false} />}
 
       <section aria-labelledby="dzieci" className="card stack" style={{ gap: 24 }}>
         <div className="spread">
