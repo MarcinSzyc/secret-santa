@@ -199,11 +199,30 @@ export async function saveSettings(formData: FormData): Promise<void> {
   back("Zapisano ustawienia.");
 }
 
+const DOMAIN_TYPOS: Record<string, string> = {
+  "gmai.com": "gmail.com",
+  "gmial.com": "gmail.com",
+  "gmal.com": "gmail.com",
+  "gamil.com": "gmail.com",
+  "gnail.com": "gmail.com",
+  "gmail.co": "gmail.com",
+  "gmail.cm": "gmail.com",
+  "gmail.pl": "gmail.com",
+  "wp.p": "wp.pl",
+  "onet.p": "onet.pl",
+  "o2.p": "o2.pl",
+  "interia.p": "interia.pl",
+  "outlok.com": "outlook.com",
+  "hotmial.com": "hotmail.com",
+};
+
 export async function addParticipant(formData: FormData): Promise<void> {
   await requireAdmin();
   const name = text(formData, "name").slice(0, 80);
   const email = normalizeEmail(text(formData, "email"));
   if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) back("Podaj imię i poprawny e-mail.");
+  const suggestion = DOMAIN_TYPOS[email.split("@")[1]];
+  if (suggestion) back(`Sprawdź adres ${email} — czy chodziło o @${suggestion}? Nikogo nie dodano.`);
   if (await getDrawnAt()) back("Losowanie już się odbyło — lista uczestników jest zamknięta.");
   const { users } = await db();
   // Adding an existing e-mail just updates the name (handy for the organizer's own entry).
@@ -213,6 +232,22 @@ export async function addParticipant(formData: FormData): Promise<void> {
     { upsert: true },
   );
   back(res.upsertedCount ? `Dodano: ${name}.` : `Zaktualizowano: ${name}.`);
+}
+
+export async function renameParticipant(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = objectId(formData, "userId");
+  const name = text(formData, "name").slice(0, 80);
+  if (!id || !name) back("Imię nie może być puste.");
+  const { users, children } = await db();
+  await users.updateOne({ _id: id }, { $set: { name } });
+  // Claimed kids' gifts keep a copy of the buyer's name for display.
+  await children.updateMany(
+    { "gifts.claimedById": id },
+    { $set: { "gifts.$[g].claimedByName": name } },
+    { arrayFilters: [{ "g.claimedById": id }] },
+  );
+  back(`Zmieniono imię na: ${name}.`);
 }
 
 export async function removeParticipant(formData: FormData): Promise<void> {

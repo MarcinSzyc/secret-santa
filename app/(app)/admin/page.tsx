@@ -1,7 +1,15 @@
 import { requireAdmin } from "@/lib/auth";
 import { db, getEvent } from "@/lib/db";
 import { plural } from "@/lib/format";
-import { addParticipant, removeParticipant, resetDraw, runDraw, saveSettings, sendReminders } from "@/lib/actions";
+import {
+  addParticipant,
+  removeParticipant,
+  renameParticipant,
+  resetDraw,
+  runDraw,
+  saveSettings,
+  sendReminders,
+} from "@/lib/actions";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CheckIcon, XIcon } from "@/components/icons";
 
@@ -37,7 +45,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         <section aria-labelledby="uczestnicy" className="card stack" style={{ flex: "999 1 560px", minWidth: 0, padding: 28 }}>
           <div className="spread" style={{ alignItems: "baseline" }}>
             <h2 id="uczestnicy" className="h2">Uczestnicy</h2>
-            <span className="body">{plural(people.length, "osoba", "osoby", "osób")} · {joined} zalogowanych</span>
+            <span className="body">{plural(people.length, "osoba", "osoby", "osób")} · zalogowani: {joined}</span>
           </div>
 
           {!drawnAt && (
@@ -69,7 +77,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   const label = listLabel(p.wishlist?.length ?? 0, !!p.lastLoginAt);
                   return (
                     <tr key={p._id.toString()}>
-                      <td style={{ fontWeight: 500 }}>{p.name}</td>
+                      <td>
+                        <form action={renameParticipant} className="name-form">
+                          <input type="hidden" name="userId" value={p._id.toString()} />
+                          <label htmlFor={`name-${p._id}`} className="sr-only">Imię i nazwisko: {p.email}</label>
+                          <input id={`name-${p._id}`} name="name" required maxLength={80} defaultValue={p.name} className="name-input" title="Kliknij, żeby zmienić imię" />
+                          <button type="submit" className="btn sm name-save">Zapisz</button>
+                        </form>
+                      </td>
                       <td style={{ color: "var(--body)" }}>{p.email}</td>
                       <td><span className={`pill ${label.ok ? "pill-green" : "pill-red"}`}>{label.text}</span></td>
                       {!drawnAt && (
@@ -92,7 +107,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             </table>
           </div>
           <p className="muted">
-            Ty też jesteś na liście i bierzesz udział w losowaniu. Żeby zmienić swoje imię, dodaj się ponownie z tym samym e-mailem.
+            Ty też jesteś na liście i bierzesz udział w losowaniu. Imię zmienisz, klikając je w tabeli.
           </p>
         </section>
 
