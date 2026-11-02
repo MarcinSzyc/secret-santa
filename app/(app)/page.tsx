@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { config } from "@/lib/config";
-import { db, getEvent } from "@/lib/db";
-import { firstName, initials, plural, zl } from "@/lib/format";
+import { db, getEvent, giftBudget } from "@/lib/db";
+import { budgetLines, firstName, initials, money, plural, zl } from "@/lib/format";
 import { addChild, addChildGift, addWish, removeChild, removeChildGift, removeWish } from "@/lib/actions";
 import { WishText } from "@/components/WishText";
 import { XIcon } from "@/components/icons";
@@ -12,23 +12,25 @@ export default async function PanelPage() {
   const { users, children } = await db();
   const [event, receiver, myChildren, participantCount] = await Promise.all([
     getEvent(),
-    me.receiverId ? users.findOne({ _id: me.receiverId }, { projection: { name: 1, wishlist: 1 } }) : null,
+    me.receiverId ? users.findOne({ _id: me.receiverId }, { projection: { name: 1, wishlist: 1, noKids: 1 } }) : null,
     children.find({ parentId: me._id }).sort({ createdAt: 1 }).toArray(),
     users.countDocuments(),
   ]);
   const meta = [
     config.eventName(),
     plural(participantCount, "uczestnik", "uczestników", "uczestników"),
-    event.budget != null && `budżet ${zl(event.budget)}`,
     event.exchangeDate && `wymiana: ${event.exchangeDate}`,
   ].filter(Boolean);
+  const budgets = budgetLines(event);
   const drawnAt = event.drawnAt;
+  const receiverBudget = receiver ? giftBudget(event, receiver) : null;
 
   return (
     <>
       <div className="stack-sm">
         <h1 className="page-title">Cześć, {firstName(me.name)}</h1>
         <p className="lead">{meta.join(" · ")}</p>
+        {budgets.length > 0 && <p className="body">{budgets.join(" · ")}</p>}
       </div>
 
       <div className="row">
@@ -39,6 +41,11 @@ export default async function PanelPage() {
               <div className="stack-sm" style={{ gap: 4 }}>
                 <p className="on-dark">Kupujesz prezent dla</p>
                 <h2 className="big-name">{receiver.name}</h2>
+                {receiverBudget != null && (
+                  <p className="pill lg" style={{ alignSelf: "flex-start", marginTop: 8, background: "#fff", color: "var(--pine)" }}>
+                    Budżet na prezent: {zl(receiverBudget)}
+                  </p>
+                )}
               </div>
               <div className="inner-white stack" style={{ gap: 12 }}>
                 <h3 style={{ fontSize: 16 }}>Lista życzeń: {firstName(receiver.name)}</h3>
@@ -108,7 +115,7 @@ export default async function PanelPage() {
             <p className="body">Listy dzieci widzą wszyscy uczestnicy — każdy może zarezerwować prezent, który kupi.</p>
             {event.childBudget != null && (
               <p className="body">
-                Budżet na prezent dla dziecka: <strong style={{ color: "var(--ink)" }}>{zl(event.childBudget)}</strong> — dopisuj rzeczy w tej cenie.
+                Budżet na prezent dla dziecka: <strong style={{ color: "var(--ink)" }}>{money(event.childBudget)}</strong> — dopisuj rzeczy w tej cenie.
               </p>
             )}
           </div>

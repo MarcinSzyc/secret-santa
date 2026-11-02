@@ -14,8 +14,13 @@ Stack: **Next.js 16** (App Router, Server Actions) · **MongoDB** · **Nodemaile
 ## Jak to działa (dla organizatora)
 
 1. Logujesz się adresem z `ADMIN_EMAILS` — organizator może się zalogować, zanim ktokolwiek jest na liście.
-2. W zakładce **Organizator** ustawiasz **budżet** (na prezent Secret Santa i osobno na prezent dla dziecka) oraz datę wymiany — wszyscy widzą je w aplikacji i w mailu po losowaniu. Można je zmienić w każdej chwili.
-3. Tam też dodajesz uczestników (imię + e-mail). Siebie też — wpisz swoje imię i ten sam e-mail, żeby nadpisać domyślną nazwę.
+2. W zakładce **Organizator** ustawiasz **budżety** i datę wymiany — wszyscy widzą je w aplikacji i w mailach. Można je zmienić w każdej chwili:
+   - **prezent dla osoby z dziećmi** — budżet domyślny, np. 100 zł,
+   - **prezent dla osoby bez dzieci** — np. 250 zł; dotyczy osób, którym w tabeli zaznaczysz **„Bez dzieci”** (puste = jeden budżet dla wszystkich),
+   - **prezent dla dziecka** — tekst, więc może być zakres, np. „100–150”.
+
+   Kto wylosuje daną osobę, widzi na karcie „Twój los” budżet właściwy dla niej.
+3. Tam też dodajesz uczestników (imię + e-mail) i zaznaczasz „Bez dzieci” tym, którzy ich nie mają. Imię każdej osoby (także swoje) zmienisz, klikając je w tabeli.
 4. Przy każdej osobie klikasz **Zaproś mailem** — dostaje maila z przyciskiem, który od razu ją loguje (ważny 14 dni). Status pokazuje „Wysłane … · nieprzyjęte”, dopóki się nie zaloguje; wtedy możesz **Wyślij ponownie**. Można też po prostu wysłać ludziom adres strony — zalogują się mailem, który dla nich wpisałeś. W tabeli widzisz, kto już się zalogował, komu poszło zaproszenie i ile kto ma pozycji na liście.
 5. Klikasz **Losuj pary**. Lista uczestników się zamyka, każdy dostaje maila, a w aplikacji zamiast „Losowanie jeszcze przed nami” pojawia się wylosowana osoba i jej lista.
 6. Po losowaniu możesz wysłać **przypomnienie** do osób z pustą listą albo **cofnąć losowanie** (np. gdy trzeba dopisać spóźnialskiego) i wylosować ponownie.
@@ -96,9 +101,9 @@ lib/
 
 ### Dane w MongoDB
 
-- `users` — uczestnik: e-mail, imię, lista życzeń (osadzona), `receiverId` (komu kupuje — ustawiane przez losowanie).
+- `users` — uczestnik: e-mail, imię, lista życzeń (osadzona), `receiverId` (komu kupuje — ustawiane przez losowanie), `noKids` (znacznik „Bez dzieci”), `invitedAt`, `lastLoginAt`.
 - `children` — dziecko: rodzic, imię, prezenty z informacją, kto je kupuje.
-- `meta` — jeden dokument `event`: data losowania (`drawnAt`, `null` = przed losowaniem), budżety (`budget`, `childBudget`) i data wymiany (`exchangeDate`).
+- `meta` — jeden dokument `event`: data losowania (`drawnAt`, `null` = przed losowaniem), budżety (`budget` — z dziećmi, `budgetNoKids` — bez dzieci, `childBudget` — dla dziecka) i data wymiany (`exchangeDate`).
 - `loginTokens`, `sessions` — hashe tokenów; wygasają same (indeks TTL).
 
 ### Bezpieczeństwo w skrócie

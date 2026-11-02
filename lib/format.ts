@@ -7,8 +7,30 @@ export function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] || name;
 }
 
+import type { EventInfo } from "./db";
+
 export function zl(amount: number): string {
   return `do ${amount.toLocaleString("pl-PL")} zł`;
+}
+
+/** A budget that may be a number (100 → "do 100 zł") or free text ("100–150" → "100–150 zł"). */
+export function money(value: number | string): string {
+  if (typeof value === "number") return zl(value);
+  const v = value.trim();
+  if (/^\d+$/.test(v)) return zl(Number(v));
+  return /zł/i.test(v) ? v : `${v} zł`;
+}
+
+/** Short budget lines for headers and e-mails. */
+export function budgetLines(event: EventInfo): string[] {
+  const lines: string[] = [];
+  if (event.budget != null && event.budgetNoKids != null && event.budget !== event.budgetNoKids) {
+    lines.push(`Prezent: ${zl(event.budget)} dla osoby z dziećmi, ${zl(event.budgetNoKids)} dla osoby bez dzieci`);
+  } else if (event.budget != null || event.budgetNoKids != null) {
+    lines.push(`Prezent: ${zl((event.budget ?? event.budgetNoKids)!)}`);
+  }
+  if (event.childBudget != null) lines.push(`Prezent dla dziecka: ${money(event.childBudget)}`);
+  return lines;
 }
 
 /** Polish plural: 1 prezent, 2–4 prezenty, 5+ prezentów (12–14 too). */

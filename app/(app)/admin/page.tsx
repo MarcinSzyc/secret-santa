@@ -10,7 +10,9 @@ import {
   saveSettings,
   sendInvite,
   sendReminders,
+  setNoKids,
 } from "@/lib/actions";
+import { KidsToggle } from "@/components/KidsToggle";
 import { INVITE_TOKEN_DAYS } from "@/lib/auth";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CheckIcon, XIcon } from "@/components/icons";
@@ -36,7 +38,10 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const { msg } = await searchParams;
   const { users } = await db();
   const [people, event] = await Promise.all([
-    users.find({}, { projection: { name: 1, email: 1, wishlist: 1, lastLoginAt: 1, invitedAt: 1 } }).sort({ name: 1 }).toArray(),
+    users
+      .find({}, { projection: { name: 1, email: 1, wishlist: 1, lastLoginAt: 1, invitedAt: 1, noKids: 1 } })
+      .sort({ name: 1 })
+      .toArray(),
     getEvent(),
   ]);
   const { drawnAt } = event;
@@ -96,7 +101,18 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                         </form>
                         <div className="email">{p.email}</div>
                       </td>
-                      <td><span className={`pill ${label.tone}`}>{label.text}</span></td>
+                      <td>
+                        <div className="status-cell">
+                          <span className={`pill ${label.tone}`}>{label.text}</span>
+                          <KidsToggle
+                            key={`${p._id}-${!!p.noKids}`}
+                            userId={p._id.toString()}
+                            name={p.name}
+                            checked={!!p.noKids}
+                            action={setNoKids}
+                          />
+                        </div>
+                      </td>
                       {!drawnAt && (
                         <td className="row-actions">
                           {!isMe && !p.lastLoginAt && (
@@ -126,7 +142,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           </div>
           <p className="muted">
             „Zaproś mailem” wysyła wiadomość z przyciskiem, który od razu loguje (ważnym {INVITE_TOKEN_DAYS} dni). Status zmieni się na
-            zielony, gdy osoba dołączy. Ty też jesteś na liście i bierzesz udział w losowaniu. Imię zmienisz, klikając je w tabeli.
+            zielony, gdy osoba dołączy. „Bez dzieci” zaznacz osobom, które nie mają dzieci — ich Mikołaj dostanie wyższy budżet.
+            Ty też jesteś na liście i bierzesz udział w losowaniu. Imię zmienisz, klikając je w tabeli.
           </p>
         </section>
 
@@ -138,12 +155,19 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             </div>
             <form action={saveSettings} className="stack" style={{ gap: 14 }}>
               <div className="stack-sm">
-                <label htmlFor="budget" className="label">Prezent Secret Santa (zł)</label>
+                <label htmlFor="budget" className="label">Prezent dla osoby z dziećmi (zł)</label>
                 <input id="budget" name="budget" type="number" inputMode="numeric" min={0} step={1} placeholder="np. 100" defaultValue={event.budget ?? ""} className="input sm" />
               </div>
               <div className="stack-sm">
+                <label htmlFor="budgetNoKids" className="label">Prezent dla osoby bez dzieci (zł)</label>
+                <input id="budgetNoKids" name="budgetNoKids" type="number" inputMode="numeric" min={0} step={1} placeholder="np. 250" defaultValue={event.budgetNoKids ?? ""} className="input sm" />
+                <span className="muted" style={{ fontSize: 13 }}>
+                  Dotyczy osób oznaczonych w tabeli jako „Bez dzieci”. Puste = ten sam budżet dla wszystkich.
+                </span>
+              </div>
+              <div className="stack-sm">
                 <label htmlFor="childBudget" className="label">Prezent dla dziecka (zł)</label>
-                <input id="childBudget" name="childBudget" type="number" inputMode="numeric" min={0} step={1} placeholder="np. 80" defaultValue={event.childBudget ?? ""} className="input sm" />
+                <input id="childBudget" name="childBudget" maxLength={40} placeholder="np. 100–150" defaultValue={event.childBudget ?? ""} className="input sm" />
               </div>
               <div className="stack-sm">
                 <label htmlFor="exchangeDate" className="label">Wymiana prezentów</label>

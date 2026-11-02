@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { db, getEvent } from "@/lib/db";
-import { initials, zl } from "@/lib/format";
+import { initials, money } from "@/lib/format";
 import { claimGift, releaseGift } from "@/lib/actions";
 import { WishText } from "@/components/WishText";
 
@@ -22,7 +22,7 @@ export default async function KidsPage() {
           <p className="lead">Wybierz prezent, który kupujesz — pozostali zobaczą, że jest już zajęty, i nic się nie zdubluje.</p>
         </div>
         {event.childBudget != null && (
-          <p className="pill pill-green lg">Budżet na dziecko: {zl(event.childBudget)}</p>
+          <p className="pill pill-green lg">Budżet na dziecko: {money(event.childBudget)}</p>
         )}
         <p className="body">
           <strong style={{ color: "var(--ink)" }}>{myCount}</strong> zarezerwowane przez Ciebie

@@ -17,6 +17,8 @@ export type User = {
   receiverId?: ObjectId | null;
   lastLoginAt?: Date | null;
   invitedAt?: Date | null;
+  /** Set by the organizer for people without kids; their Santa gets the "no kids" budget. */
+  noKids?: boolean | null;
   createdAt: Date;
 };
 
@@ -52,9 +54,14 @@ export type Session = {
 export type EventMeta = {
   _id: "event";
   drawnAt: Date | null;
-  /** Gift budget in PLN for adults (the Secret Santa gift) and for each child's gift. */
+  /**
+   * Secret Santa gift budget in PLN: `budget` for someone who has kids (or for everyone when
+   * `budgetNoKids` is unset), `budgetNoKids` for someone without. `childBudget` is per child's
+   * gift and may be free text such as "100–150".
+   */
   budget?: number | null;
-  childBudget?: number | null;
+  budgetNoKids?: number | null;
+  childBudget?: number | string | null;
   /** Free text, e.g. "24 grudnia". */
   exchangeDate?: string | null;
 };
@@ -62,7 +69,8 @@ export type EventMeta = {
 export type EventInfo = {
   drawnAt: Date | null;
   budget: number | null;
-  childBudget: number | null;
+  budgetNoKids: number | null;
+  childBudget: number | string | null;
   exchangeDate: string | null;
 };
 
@@ -114,9 +122,15 @@ export async function getEvent(): Promise<EventInfo> {
   return {
     drawnAt: doc?.drawnAt ?? null,
     budget: doc?.budget ?? null,
+    budgetNoKids: doc?.budgetNoKids ?? null,
     childBudget: doc?.childBudget ?? null,
     exchangeDate: doc?.exchangeDate ?? null,
   };
+}
+
+/** The Secret Santa gift budget for a receiver. */
+export function giftBudget(event: EventInfo, receiver: Pick<User, "noKids">): number | null {
+  return receiver.noKids ? (event.budgetNoKids ?? event.budget) : event.budget;
 }
 
 export async function getDrawnAt(): Promise<Date | null> {

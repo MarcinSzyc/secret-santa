@@ -189,7 +189,8 @@ export async function saveSettings(formData: FormData): Promise<void> {
     {
       $set: {
         budget: amount(formData, "budget"),
-        childBudget: amount(formData, "childBudget"),
+        budgetNoKids: amount(formData, "budgetNoKids"),
+        childBudget: text(formData, "childBudget").slice(0, 40) || null,
         exchangeDate: text(formData, "exchangeDate").slice(0, 60) || null,
       },
       $setOnInsert: { drawnAt: null },
@@ -248,6 +249,16 @@ export async function renameParticipant(formData: FormData): Promise<void> {
     { arrayFilters: [{ "g.claimedById": id }] },
   );
   back(`Zmieniono imię na: ${name}.`);
+}
+
+export async function setNoKids(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = objectId(formData, "userId");
+  if (!id) back("Nie znaleziono osoby.");
+  const value = formData.get("noKids") === "on";
+  const { users } = await db();
+  const person = await users.findOneAndUpdate({ _id: id }, { $set: { noKids: value } });
+  back(person ? `${person.name}: ${value ? "bez dzieci" : "z dziećmi"}.` : "Nie znaleziono osoby.");
 }
 
 export async function removeParticipant(formData: FormData): Promise<void> {

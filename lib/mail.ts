@@ -3,7 +3,7 @@ import nodemailer, { type Transporter } from "nodemailer";
 import { config } from "./config";
 import { INVITE_TOKEN_DAYS, LOGIN_TOKEN_MINUTES } from "./auth";
 import type { EventInfo } from "./db";
-import { zl } from "./format";
+import { budgetLines } from "./format";
 
 let transporter: Transporter | undefined;
 
@@ -95,8 +95,7 @@ function p(html: string, color: string = C.body, size = 16): string {
 
 function eventFooter(event: EventInfo): string {
   const parts = [
-    event.budget != null && `Budżet: ${zl(event.budget)}`,
-    event.childBudget != null && `Prezent dla dziecka: ${zl(event.childBudget)}`,
+    ...budgetLines(event).map(esc),
     event.exchangeDate && `Wymiana prezentów: ${esc(event.exchangeDate)}`,
   ].filter(Boolean);
   return parts.join(" · ");
@@ -125,8 +124,10 @@ export function inviteMail(name: string, inviterName: string, loginUrl: string, 
   const inviter = inviterName.split(" ")[0] || inviterName;
   const subject = `${inviter} zaprasza Cię do ${config.eventName()}`;
   const facts = [
-    event.budget != null && `<strong style="color:${C.ink}">Budżet:</strong> ${zl(event.budget)}`,
-    event.childBudget != null && `<strong style="color:${C.ink}">Prezent dla dziecka:</strong> ${zl(event.childBudget)}`,
+    ...budgetLines(event).map((line) => {
+      const [label, value] = line.split(": ");
+      return `<strong style="color:${C.ink}">${esc(label)}:</strong> ${esc(value)}`;
+    }),
     event.exchangeDate && `<strong style="color:${C.ink}">Wymiana:</strong> ${esc(event.exchangeDate)}`,
   ].filter(Boolean);
   const html = layout(
