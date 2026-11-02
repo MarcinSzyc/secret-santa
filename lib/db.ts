@@ -51,6 +51,18 @@ export type Session = {
 export type EventMeta = {
   _id: "event";
   drawnAt: Date | null;
+  /** Gift budget in PLN for adults (the Secret Santa gift) and for each child's gift. */
+  budget?: number | null;
+  childBudget?: number | null;
+  /** Free text, e.g. "24 grudnia". */
+  exchangeDate?: string | null;
+};
+
+export type EventInfo = {
+  drawnAt: Date | null;
+  budget: number | null;
+  childBudget: number | null;
+  exchangeDate: string | null;
 };
 
 declare global {
@@ -95,8 +107,17 @@ export async function db() {
   };
 }
 
-export async function getDrawnAt(): Promise<Date | null> {
+export async function getEvent(): Promise<EventInfo> {
   const { meta } = await db();
   const doc = await meta.findOne({ _id: "event" });
-  return doc?.drawnAt ?? null;
+  return {
+    drawnAt: doc?.drawnAt ?? null,
+    budget: doc?.budget ?? null,
+    childBudget: doc?.childBudget ?? null,
+    exchangeDate: doc?.exchangeDate ?? null,
+  };
+}
+
+export async function getDrawnAt(): Promise<Date | null> {
+  return (await getEvent()).drawnAt;
 }

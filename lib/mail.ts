@@ -2,6 +2,8 @@ import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import { config } from "./config";
 import { LOGIN_TOKEN_MINUTES } from "./auth";
+import type { EventInfo } from "./db";
+import { zl } from "./format";
 
 let transporter: Transporter | undefined;
 
@@ -83,10 +85,11 @@ function p(html: string, color: string = C.body, size = 16): string {
   return `<p style="margin:0 0 18px;font-size:${size}px;line-height:1.6;color:${color}">${html}</p>`;
 }
 
-function eventFooter(): string {
+function eventFooter(event: EventInfo): string {
   const parts = [
-    config.eventBudget() && `Budżet: do ${esc(config.eventBudget())}`,
-    config.eventDate() && `Wymiana prezentów: ${esc(config.eventDate())}`,
+    event.budget != null && `Budżet: ${zl(event.budget)}`,
+    event.childBudget != null && `Prezent dla dziecka: ${zl(event.childBudget)}`,
+    event.exchangeDate && `Wymiana prezentów: ${esc(event.exchangeDate)}`,
   ].filter(Boolean);
   return parts.join(" · ");
 }
@@ -109,7 +112,7 @@ export function loginMail(url: string): Mail {
   return { subject, html, text };
 }
 
-export function drawMail(name: string, url: string): Mail {
+export function drawMail(name: string, url: string, event: EventInfo): Mail {
   const first = name.split(" ")[0] || name;
   const subject = "Losowanie zakończone — sprawdź, komu kupujesz prezent";
   const html = layout(
@@ -125,7 +128,7 @@ ${button(url, "Zobacz, kogo wylosowałeś", false)}
 <h2 style="margin:0 0 8px;font-size:16px;color:${C.ink}">Przy okazji</h2>
 <p style="margin:0;font-size:15px;line-height:1.6;color:${C.body}">Sprawdź, czy Twoja lista życzeń jest kompletna — Twój Mikołaj właśnie ją zobaczył. Zajrzyj też do list dzieci i zarezerwuj prezent, który kupujesz.</p>
 </td></tr>`,
-    eventFooter(),
+    eventFooter(event),
   );
   const text = `Cześć ${first}!\n\nLosowanie zakończone. Zaloguj się, żeby zobaczyć, komu kupujesz prezent:\n${url}\n\nSprawdź też, czy Twoja lista życzeń jest kompletna.`;
   return { subject, html, text };

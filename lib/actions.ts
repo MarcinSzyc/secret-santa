@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ObjectId, MongoServerError } from "mongodb";
 import { appUrl, isAdminEmail, normalizeEmail } from "./config";
-import { db, getDrawnAt } from "./db";
+import { db, getDrawnAt, getEvent } from "./db";
 import { createLoginToken, endSession, recentlySentLink, requireAdmin, requireUser } from "./auth";
 import { drawMail, loginMail, reminderMail, sendMail } from "./mail";
 
@@ -174,6 +174,31 @@ function back(msg: string): never {
   redirect(`/admin?msg=${encodeURIComponent(msg)}`);
 }
 
+function amount(formData: FormData, key: string): number | null {
+  const raw = String(formData.get(key) ?? "").replace(",", ".").trim();
+  if (!raw) return null;
+  const n = Math.round(Number(raw));
+  return Number.isFinite(n) && n >= 0 && n <= 100_000 ? n : null;
+}
+
+export async function saveSettings(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { meta } = await db();
+  await meta.updateOne(
+    { _id: "event" },
+    {
+      $set: {
+        budget: amount(formData, "budget"),
+        childBudget: amount(formData, "childBudget"),
+        exchangeDate: text(formData, "exchangeDate").slice(0, 60) || null,
+      },
+      $setOnInsert: { drawnAt: null },
+    },
+    { upsert: true },
+  );
+  back("Zapisano ustawienia.");
+}
+
 export async function addParticipant(formData: FormData): Promise<void> {
   await requireAdmin();
   const name = text(formData, "name").slice(0, 80);
@@ -245,10 +270,11 @@ export async function runDraw(): Promise<void> {
   }
 
   const url = await appUrl();
+  const event = await getEvent();
   let failed = 0;
   for (const person of people) {
     try {
-      await sendMail(person.email, drawMail(person.name, url));
+      await sendMail(person.email, drawMail(person.name, url, event));
     } catch (err) {
       failed++;
       console.error(`Nie wysłano maila po losowaniu do ${person.email}`, err);

@@ -14,10 +14,11 @@ Stack: **Next.js 16** (App Router, Server Actions) · **MongoDB** · **Nodemaile
 ## Jak to działa (dla organizatora)
 
 1. Logujesz się adresem z `ADMIN_EMAILS` — organizator może się zalogować, zanim ktokolwiek jest na liście.
-2. W zakładce **Organizator** dodajesz uczestników (imię + e-mail). Siebie też — wpisz swoje imię i ten sam e-mail, żeby nadpisać domyślną nazwę.
-3. Dajesz ludziom znać o stronie. Logują się sami swoim mailem i uzupełniają listy życzeń. W tabeli widzisz, kto już się zalogował i ile ma pozycji.
-4. Klikasz **Losuj pary**. Lista uczestników się zamyka, każdy dostaje maila, a w aplikacji zamiast „Losowanie jeszcze przed nami” pojawia się wylosowana osoba i jej lista.
-5. Po losowaniu możesz wysłać **przypomnienie** do osób z pustą listą albo **cofnąć losowanie** (np. gdy trzeba dopisać spóźnialskiego) i wylosować ponownie.
+2. W zakładce **Organizator** ustawiasz **budżet** (na prezent Secret Santa i osobno na prezent dla dziecka) oraz datę wymiany — wszyscy widzą je w aplikacji i w mailu po losowaniu. Można je zmienić w każdej chwili.
+3. Tam też dodajesz uczestników (imię + e-mail). Siebie też — wpisz swoje imię i ten sam e-mail, żeby nadpisać domyślną nazwę.
+4. Dajesz ludziom znać o stronie. Logują się sami swoim mailem i uzupełniają listy życzeń. W tabeli widzisz, kto już się zalogował i ile ma pozycji.
+5. Klikasz **Losuj pary**. Lista uczestników się zamyka, każdy dostaje maila, a w aplikacji zamiast „Losowanie jeszcze przed nami” pojawia się wylosowana osoba i jej lista.
+6. Po losowaniu możesz wysłać **przypomnienie** do osób z pustą listą albo **cofnąć losowanie** (np. gdy trzeba dopisać spóźnialskiego) i wylosować ponownie.
 
 Pary są tajne — aplikacja nie pokazuje ich nikomu, także organizatorowi.
 
@@ -44,8 +45,8 @@ Aplikacja wstaje na http://localhost:3000. Jako `MONGODB_URI` możesz podać Atl
 | `ADMIN_EMAILS` | E-mail(e) organizatora, po przecinku. Tylko oni widzą zakładkę Organizator. |
 | `APP_URL` | Publiczny adres aplikacji do linków w mailach, np. `https://secret-santa-xyz.vercel.app`. Jeśli brak — brany z adresu, pod którym ktoś wszedł. |
 | `EVENT_NAME` | Nazwa wydarzenia, np. `Secret Santa 2026`. |
-| `EVENT_BUDGET` | Opcjonalnie, np. `100 zł`. |
-| `EVENT_DATE` | Opcjonalnie, data wymiany prezentów, np. `24 grudnia`. |
+
+Budżet na prezent Secret Santa, budżet na prezent dla dziecka i datę wymiany ustawia organizator w aplikacji — nie trzeba nic zmieniać na Vercelu.
 
 ## Konfiguracja usług
 
@@ -95,7 +96,7 @@ lib/
 
 - `users` — uczestnik: e-mail, imię, lista życzeń (osadzona), `receiverId` (komu kupuje — ustawiane przez losowanie).
 - `children` — dziecko: rodzic, imię, prezenty z informacją, kto je kupuje.
-- `meta` — jeden dokument `event` z datą losowania (`drawnAt`); `null` = przed losowaniem.
+- `meta` — jeden dokument `event`: data losowania (`drawnAt`, `null` = przed losowaniem), budżety (`budget`, `childBudget`) i data wymiany (`exchangeDate`).
 - `loginTokens`, `sessions` — hashe tokenów; wygasają same (indeks TTL).
 
 ### Bezpieczeństwo w skrócie

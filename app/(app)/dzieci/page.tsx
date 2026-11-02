@@ -1,13 +1,13 @@
 import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { initials } from "@/lib/format";
+import { db, getEvent } from "@/lib/db";
+import { initials, zl } from "@/lib/format";
 import { claimGift, releaseGift } from "@/lib/actions";
 import { WishText } from "@/components/WishText";
 
 export default async function KidsPage() {
   const me = await requireUser();
   const { children, users } = await db();
-  const kids = await children.find({}).sort({ name: 1 }).toArray();
+  const [kids, event] = await Promise.all([children.find({}).sort({ name: 1 }).toArray(), getEvent()]);
   const parents = await users
     .find({ _id: { $in: kids.map((k) => k.parentId) } }, { projection: { name: 1 } })
     .toArray();
@@ -21,6 +21,9 @@ export default async function KidsPage() {
           <h1 className="page-title">Listy dzieci</h1>
           <p className="lead">Wybierz prezent, który kupujesz — pozostali zobaczą, że jest już zajęty, i nic się nie zdubluje.</p>
         </div>
+        {event.childBudget != null && (
+          <p className="pill pill-green lg">Budżet na dziecko: {zl(event.childBudget)}</p>
+        )}
         <p className="body">
           <strong style={{ color: "var(--ink)" }}>{myCount}</strong> zarezerwowane przez Ciebie
         </p>

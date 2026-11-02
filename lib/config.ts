@@ -13,8 +13,6 @@ export const config = {
   gmailUser: () => required("GMAIL_USER"),
   gmailAppPassword: () => required("GMAIL_APP_PASSWORD"),
   eventName: () => process.env.EVENT_NAME || "Secret Santa",
-  eventBudget: () => process.env.EVENT_BUDGET || "",
-  eventDate: () => process.env.EVENT_DATE || "",
 };
 
 export function normalizeEmail(email: string): string {

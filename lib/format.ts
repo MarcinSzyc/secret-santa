@@ -7,6 +7,10 @@ export function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] || name;
 }
 
+export function zl(amount: number): string {
+  return `do ${amount.toLocaleString("pl-PL")} zł`;
+}
+
 /** Polish plural: 1 prezent, 2–4 prezenty, 5+ prezentów (12–14 too). */
 export function plural(n: number, one: string, few: string, many: string): string {
   if (n === 1) return `1 ${one}`;

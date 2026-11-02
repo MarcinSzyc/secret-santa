@@ -1,7 +1,7 @@
 import { requireAdmin } from "@/lib/auth";
-import { db, getDrawnAt } from "@/lib/db";
+import { db, getEvent } from "@/lib/db";
 import { plural } from "@/lib/format";
-import { addParticipant, removeParticipant, resetDraw, runDraw, sendReminders } from "@/lib/actions";
+import { addParticipant, removeParticipant, resetDraw, runDraw, saveSettings, sendReminders } from "@/lib/actions";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CheckIcon, XIcon } from "@/components/icons";
 
@@ -17,10 +17,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const me = await requireAdmin();
   const { msg } = await searchParams;
   const { users } = await db();
-  const [people, drawnAt] = await Promise.all([
+  const [people, event] = await Promise.all([
     users.find({}, { projection: { name: 1, email: 1, wishlist: 1, lastLoginAt: 1 } }).sort({ name: 1 }).toArray(),
-    getDrawnAt(),
+    getEvent(),
   ]);
+  const { drawnAt } = event;
   const joined = people.filter((p) => p.lastLoginAt).length;
 
   return (
@@ -95,56 +96,80 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           </p>
         </section>
 
-        <section aria-labelledby="losowanie" className="card-dark stack" style={{ flex: "1 1 320px", minWidth: 0, padding: 28, gap: 16 }}>
-          <h2 id="losowanie" className="h2">Losowanie</h2>
-          {!drawnAt ? (
-            <>
-              <p className="on-dark" style={{ fontSize: 15 }}>
-                Aplikacja przypisze każdej osobie kogoś innego — nikt nie wylosuje siebie, a pary tworzą jedno zamknięte koło.
-              </p>
-              <form action={runDraw}>
-                <ConfirmButton
-                  className="btn btn-light block"
-                  confirm={`Losujemy pary dla ${people.length} osób i wysyłamy wszystkim maila. Kontynuować?`}
-                  pendingLabel="Losuję i wysyłam maile…"
-                >
-                  Losuj pary ({plural(people.length, "osoba", "osoby", "osób")})
-                </ConfirmButton>
-              </form>
-              <p className="on-dark" style={{ fontSize: 14 }}>
-                Po losowaniu lista uczestników zostaje zamknięta, a każdy dostanie e-mail z linkiem do aplikacji.
-              </p>
-            </>
-          ) : (
-            <>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 600 }}>
-                <CheckIcon />
-                <span>Losowanie zakończone {drawnAt.toLocaleDateString("pl-PL", { day: "numeric", month: "long" })}</span>
+        <div className="stack" style={{ flex: "1 1 320px", minWidth: 0, gap: 24 }}>
+          <section aria-labelledby="ustawienia" className="card stack" style={{ padding: 28, gap: 16 }}>
+            <div className="stack-sm">
+              <h2 id="ustawienia" className="h2">Budżet i termin</h2>
+              <p className="muted">Widoczne dla wszystkich w aplikacji i w mailu po losowaniu. Możesz zmienić w każdej chwili.</p>
+            </div>
+            <form action={saveSettings} className="stack" style={{ gap: 14 }}>
+              <div className="stack-sm">
+                <label htmlFor="budget" className="label">Prezent Secret Santa (zł)</label>
+                <input id="budget" name="budget" type="number" inputMode="numeric" min={0} step={1} placeholder="np. 100" defaultValue={event.budget ?? ""} className="input sm" />
               </div>
-              <p className="on-dark" style={{ fontSize: 15 }}>
-                Każdy widzi już swoją osobę po zalogowaniu. Pary są tajne — nawet organizator ich nie widzi.
-              </p>
-              <form action={sendReminders}>
-                <ConfirmButton
-                  className="btn btn-ghost-light block"
-                  confirm="Wysłać maila do osób, które mają pustą listę życzeń?"
-                  pendingLabel="Wysyłam…"
-                >
-                  Przypomnij o pustych listach
-                </ConfirmButton>
-              </form>
-              <form action={resetDraw}>
-                <ConfirmButton
-                  className="link-btn on-dark"
-                  confirm="Cofnąć losowanie? Wszystkie pary zostaną skasowane, a ludzie mogli już zacząć kupować prezenty."
-                  pendingLabel="Cofam…"
-                >
-                  Cofnij losowanie
-                </ConfirmButton>
-              </form>
-            </>
-          )}
-        </section>
+              <div className="stack-sm">
+                <label htmlFor="childBudget" className="label">Prezent dla dziecka (zł)</label>
+                <input id="childBudget" name="childBudget" type="number" inputMode="numeric" min={0} step={1} placeholder="np. 80" defaultValue={event.childBudget ?? ""} className="input sm" />
+              </div>
+              <div className="stack-sm">
+                <label htmlFor="exchangeDate" className="label">Wymiana prezentów</label>
+                <input id="exchangeDate" name="exchangeDate" maxLength={60} placeholder="np. 24 grudnia, Wigilia u babci" defaultValue={event.exchangeDate ?? ""} className="input sm" />
+              </div>
+              <button type="submit" className="btn btn-outline sm">Zapisz</button>
+            </form>
+          </section>
+
+          <section aria-labelledby="losowanie" className="card-dark stack" style={{ padding: 28, gap: 16 }}>
+            <h2 id="losowanie" className="h2">Losowanie</h2>
+            {!drawnAt ? (
+              <>
+                <p className="on-dark" style={{ fontSize: 15 }}>
+                  Aplikacja przypisze każdej osobie kogoś innego — nikt nie wylosuje siebie, a pary tworzą jedno zamknięte koło.
+                </p>
+                <form action={runDraw}>
+                  <ConfirmButton
+                    className="btn btn-light block"
+                    confirm={`Losujemy pary dla ${people.length} osób i wysyłamy wszystkim maila. Kontynuować?`}
+                    pendingLabel="Losuję i wysyłam maile…"
+                  >
+                    Losuj pary ({plural(people.length, "osoba", "osoby", "osób")})
+                  </ConfirmButton>
+                </form>
+                <p className="on-dark" style={{ fontSize: 14 }}>
+                  Po losowaniu lista uczestników zostaje zamknięta, a każdy dostanie e-mail z linkiem do aplikacji.
+                </p>
+              </>
+            ) : (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 600 }}>
+                  <CheckIcon />
+                  <span>Losowanie zakończone {drawnAt.toLocaleDateString("pl-PL", { day: "numeric", month: "long" })}</span>
+                </div>
+                <p className="on-dark" style={{ fontSize: 15 }}>
+                  Każdy widzi już swoją osobę po zalogowaniu. Pary są tajne — nawet organizator ich nie widzi.
+                </p>
+                <form action={sendReminders}>
+                  <ConfirmButton
+                    className="btn btn-ghost-light block"
+                    confirm="Wysłać maila do osób, które mają pustą listę życzeń?"
+                    pendingLabel="Wysyłam…"
+                  >
+                    Przypomnij o pustych listach
+                  </ConfirmButton>
+                </form>
+                <form action={resetDraw}>
+                  <ConfirmButton
+                    className="link-btn on-dark"
+                    confirm="Cofnąć losowanie? Wszystkie pary zostaną skasowane, a ludzie mogli już zacząć kupować prezenty."
+                    pendingLabel="Cofam…"
+                  >
+                    Cofnij losowanie
+                  </ConfirmButton>
+                </form>
+              </>
+            )}
+          </section>
+        </div>
       </div>
     </>
   );
