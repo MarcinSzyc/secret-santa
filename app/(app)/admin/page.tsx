@@ -8,17 +8,23 @@ import {
   resetDraw,
   runDraw,
   saveSettings,
+  sendInvites,
   sendReminders,
 } from "@/lib/actions";
+import { INVITE_TOKEN_DAYS } from "@/lib/auth";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CheckIcon, XIcon } from "@/components/icons";
 
 // Drawing sends one e-mail per person, which can take a while over Gmail SMTP.
 export const maxDuration = 60;
 
-function listLabel(count: number, loggedIn: boolean): { text: string; ok: boolean } {
-  if (count > 0) return { text: plural(count, "pozycja", "pozycje", "pozycji"), ok: true };
-  return { text: loggedIn ? "Pusta lista" : "Jeszcze się nie zalogował(a)", ok: false };
+function listLabel(count: number, loggedIn: boolean, invitedAt?: Date | null): { text: string; tone: string } {
+  if (count > 0) return { text: plural(count, "pozycja", "pozycje", "pozycji"), tone: "pill-green" };
+  if (loggedIn) return { text: "Pusta lista", tone: "pill-red" };
+  if (invitedAt) {
+    return { text: `Zaproszenie wysłane ${invitedAt.toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}`, tone: "pill-grey" };
+  }
+  return { text: "Jeszcze się nie zalogował(a)", tone: "pill-red" };
 }
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
@@ -26,11 +32,12 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const { msg } = await searchParams;
   const { users } = await db();
   const [people, event] = await Promise.all([
-    users.find({}, { projection: { name: 1, email: 1, wishlist: 1, lastLoginAt: 1 } }).sort({ name: 1 }).toArray(),
+    users.find({}, { projection: { name: 1, email: 1, wishlist: 1, lastLoginAt: 1, invitedAt: 1 } }).sort({ name: 1 }).toArray(),
     getEvent(),
   ]);
   const { drawnAt } = event;
   const joined = people.filter((p) => p.lastLoginAt).length;
+  const toInvite = people.filter((p) => !p.lastLoginAt && !p._id.equals(me._id)).length;
 
   return (
     <>
@@ -74,7 +81,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               </thead>
               <tbody>
                 {people.map((p) => {
-                  const label = listLabel(p.wishlist?.length ?? 0, !!p.lastLoginAt);
+                  const label = listLabel(p.wishlist?.length ?? 0, !!p.lastLoginAt, p.invitedAt);
                   return (
                     <tr key={p._id.toString()}>
                       <td>
@@ -86,7 +93,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                         </form>
                       </td>
                       <td style={{ color: "var(--body)" }}>{p.email}</td>
-                      <td><span className={`pill ${label.ok ? "pill-green" : "pill-red"}`}>{label.text}</span></td>
+                      <td><span className={`pill ${label.tone}`}>{label.text}</span></td>
                       {!drawnAt && (
                         <td style={{ width: 52 }}>
                           {!p._id.equals(me._id) && (
@@ -106,6 +113,20 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               </tbody>
             </table>
           </div>
+          {!drawnAt && toInvite > 0 && (
+            <form action={sendInvites} className="invite-bar">
+              <ConfirmButton
+                className="btn sm"
+                confirm={`Wysłać zaproszenie mailem do ${plural(toInvite, "osoby", "osób", "osób")}, które jeszcze się nie zalogowały?`}
+                pendingLabel="Wysyłam…"
+              >
+                Wyślij zaproszenia ({toInvite})
+              </ConfirmButton>
+              <p className="muted" style={{ flex: "1 1 260px" }}>
+                Mail z przyciskiem logowania (ważnym {INVITE_TOKEN_DAYS} dni) dostaną osoby, które jeszcze się nie zalogowały.
+              </p>
+            </form>
+          )}
           <p className="muted">
             Ty też jesteś na liście i bierzesz udział w losowaniu. Imię zmienisz, klikając je w tabeli.
           </p>

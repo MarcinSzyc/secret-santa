@@ -1,7 +1,7 @@
 import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import { config } from "./config";
-import { LOGIN_TOKEN_MINUTES } from "./auth";
+import { INVITE_TOKEN_DAYS, LOGIN_TOKEN_MINUTES } from "./auth";
 import type { EventInfo } from "./db";
 import { zl } from "./format";
 
@@ -19,6 +19,14 @@ function transport(): Transporter {
 type Mail = { subject: string; html: string; text: string };
 
 export async function sendMail(to: string, mail: Mail): Promise<void> {
+  if (process.env.MAIL_DEV_LOG === "1" && process.env.NODE_ENV !== "production") {
+    // Local development without Gmail: print the mail and keep the HTML for a look in the browser.
+    const { mkdir, writeFile } = await import("node:fs/promises");
+    await mkdir("public/_mail", { recursive: true });
+    await writeFile("public/_mail/last.html", mail.html);
+    console.log(`\n[mail] do: ${to}\n[mail] temat: ${mail.subject}\n${mail.text}\n[mail] podgląd: /_mail/last.html\n`);
+    return;
+  }
   await transport().sendMail({
     from: { name: config.eventName(), address: config.gmailUser() },
     to,
@@ -109,6 +117,41 @@ export function loginMail(url: string): Mail {
     "Dostajesz tę wiadomość, bo jesteś na liście uczestników Secret Santa.",
   );
   const text = `Zaloguj się do ${config.eventName()}:\n${url}\n\nLink działa przez ${LOGIN_TOKEN_MINUTES} minut. Jeśli to nie Ty prosiłeś o logowanie, zignoruj tę wiadomość.`;
+  return { subject, html, text };
+}
+
+export function inviteMail(name: string, inviterName: string, loginUrl: string, appUrl: string, event: EventInfo): Mail {
+  const first = name.split(" ")[0] || name;
+  const inviter = inviterName.split(" ")[0] || inviterName;
+  const subject = `${inviter} zaprasza Cię do ${config.eventName()}`;
+  const facts = [
+    event.budget != null && `<strong style="color:${C.ink}">Budżet:</strong> ${zl(event.budget)}`,
+    event.childBudget != null && `<strong style="color:${C.ink}">Prezent dla dziecka:</strong> ${zl(event.childBudget)}`,
+    event.exchangeDate && `<strong style="color:${C.ink}">Wymiana:</strong> ${esc(event.exchangeDate)}`,
+  ].filter(Boolean);
+  const html = layout(
+    "Dopisz, co chcesz dostać, zanim wylosujemy pary.",
+    `<tr><td style="background:${C.pine};border-radius:16px;padding:36px;font-family:${SANS};color:#FFFFFF">
+<p style="margin:0 0 14px;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:${C.pineLabel}">Zaproszenie</p>
+${h1(`Cześć ${first}, losujemy prezenty!`, "#FFFFFF")}
+${p(`${esc(inviter)} zaprasza Cię do wspólnego Secret Santa. Każdy kupuje prezent jednej, wylosowanej osobie — a żeby trafić w gust, dopisz w aplikacji, co chcesz dostać.`, C.pineSoft)}
+${button(loginUrl, "Dołącz i uzupełnij listę", false)}
+<div style="height:18px"></div>
+<p style="margin:0;font-size:14px;line-height:1.6;color:${C.pineSoft}">Przycisk od razu Cię loguje i działa przez ${INVITE_TOKEN_DAYS} dni. Później wejdź na <a href="${esc(appUrl)}" style="color:#FFFFFF">${esc(appUrl.replace(/^https?:\/\//, ""))}</a> i zaloguj się tym adresem e-mail.</p>
+</td></tr>
+<tr><td style="height:20px"></td></tr>
+<tr><td style="background:#FFFFFF;border:1px solid ${C.line};border-radius:16px;padding:24px 28px;font-family:${SANS}">
+<h2 style="margin:0 0 10px;font-size:16px;color:${C.ink}">Co zrobić w aplikacji</h2>
+<ol style="margin:0;padding-left:20px;font-size:15px;line-height:1.7;color:${C.body}">
+<li>Dopisz swoją listę życzeń — linki do sklepów albo krótkie opisy.</li>
+<li>Masz dzieci? Dodaj je i ich listy. Te są widoczne dla wszystkich.</li>
+<li>Poczekaj na losowanie — dostaniesz maila, gdy będzie gotowe.</li>
+</ol>
+${facts.length ? `<p style="margin:14px 0 0;padding-top:12px;border-top:1px solid #E4E8E3;font-size:14px;line-height:1.7;color:${C.body}">${facts.join(" &nbsp;·&nbsp; ")}</p>` : ""}
+</td></tr>`,
+    "Dostajesz tę wiadomość, bo organizator dodał Cię do listy uczestników.",
+  );
+  const text = `Cześć ${first}!\n\n${inviter} zaprasza Cię do ${config.eventName()}. Dołącz i dopisz swoją listę życzeń:\n${loginUrl}\n\nLink działa przez ${INVITE_TOKEN_DAYS} dni. Później wejdź na ${appUrl} i zaloguj się tym adresem e-mail.`;
   return { subject, html, text };
 }
 

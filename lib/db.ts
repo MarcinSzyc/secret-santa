@@ -16,6 +16,7 @@ export type User = {
   /** Who this person buys a gift for. Set by the draw, never shown to anyone else. */
   receiverId?: ObjectId | null;
   lastLoginAt?: Date | null;
+  invitedAt?: Date | null;
   createdAt: Date;
 };
 

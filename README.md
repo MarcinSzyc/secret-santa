@@ -6,7 +6,7 @@ Prosta aplikacja do losowania Secret Santa dla kilku–kilkunastu osób.
 - **Losowanie** — organizator dodaje uczestników i jednym przyciskiem losuje pary. Każdy widzi tylko osobę, której kupuje prezent. Pary tworzą jedno zamknięte koło, więc nikt nie wylosuje siebie.
 - **Lista życzeń** — każdy dopisuje po kolei, co chce dostać (link albo opis). Widzi ją tylko osoba, która go wylosowała.
 - **Dzieci** — każdy może dodać swoje dziecko z listą prezentów. Listy dzieci są publiczne, a przy każdym prezencie można kliknąć „Kupuję to” — wtedy wszyscy widzą, kto go kupuje.
-- **Maile** — link logowania, powiadomienie po losowaniu i przypomnienie o pustej liście (wysyłane z Gmaila).
+- **Maile** — zaproszenie, link logowania, powiadomienie po losowaniu i przypomnienie o pustej liście (wysyłane z Gmaila).
 - Działa i wygląda dobrze na telefonie.
 
 Stack: **Next.js 16** (App Router, Server Actions) · **MongoDB** · **Nodemailer + Gmail SMTP** · hosting na **Vercelu**.
@@ -16,7 +16,7 @@ Stack: **Next.js 16** (App Router, Server Actions) · **MongoDB** · **Nodemaile
 1. Logujesz się adresem z `ADMIN_EMAILS` — organizator może się zalogować, zanim ktokolwiek jest na liście.
 2. W zakładce **Organizator** ustawiasz **budżet** (na prezent Secret Santa i osobno na prezent dla dziecka) oraz datę wymiany — wszyscy widzą je w aplikacji i w mailu po losowaniu. Można je zmienić w każdej chwili.
 3. Tam też dodajesz uczestników (imię + e-mail). Siebie też — wpisz swoje imię i ten sam e-mail, żeby nadpisać domyślną nazwę.
-4. Dajesz ludziom znać o stronie. Logują się sami swoim mailem i uzupełniają listy życzeń. W tabeli widzisz, kto już się zalogował i ile ma pozycji.
+4. Klikasz **Wyślij zaproszenia** — każda osoba, która jeszcze się nie zalogowała, dostaje maila z przyciskiem, który od razu ją loguje (ważny 14 dni). Możesz to powtórzyć dla spóźnialskich. Można też po prostu wysłać ludziom adres strony — zalogują się mailem, który dla nich wpisałeś. W tabeli widzisz, kto już się zalogował, komu poszło zaproszenie i ile kto ma pozycji na liście.
 5. Klikasz **Losuj pary**. Lista uczestników się zamyka, każdy dostaje maila, a w aplikacji zamiast „Losowanie jeszcze przed nami” pojawia się wylosowana osoba i jej lista.
 6. Po losowaniu możesz wysłać **przypomnienie** do osób z pustą listą albo **cofnąć losowanie** (np. gdy trzeba dopisać spóźnialskiego) i wylosować ponownie.
 
@@ -33,6 +33,8 @@ npm run dev
 ```
 
 Aplikacja wstaje na http://localhost:3000. Jako `MONGODB_URI` możesz podać Atlasa albo lokalnego `mongod` (`mongodb://127.0.0.1:27017`).
+
+Żeby lokalnie nie wysyłać prawdziwych maili, dodaj do `.env.local` `MAIL_DEV_LOG="1"`: treść maila (z linkiem logowania) trafi do konsoli, a jego HTML do http://localhost:3000/_mail/last.html. Na produkcji ta opcja jest ignorowana.
 
 ## Zmienne środowiskowe
 
@@ -102,6 +104,6 @@ lib/
 ### Bezpieczeństwo w skrócie
 
 - W bazie trzymamy tylko hashe (SHA-256) tokenów logowania i sesji.
-- Link logowania jest ważny 15 minut; nowy można wysłać raz na minutę.
+- Link logowania jest ważny 15 minut; nowy można wysłać raz na minutę. Link z zaproszenia działa 14 dni — kto ma dostęp do skrzynki uczestnika, może się na niego zalogować (tak jak przy każdym magic linku).
 - Sesja trwa 90 dni (ciasteczko `httpOnly`, `secure` na produkcji).
 - Wylosowana osoba trafia do przeglądarki tylko u osoby, która ją wylosowała.

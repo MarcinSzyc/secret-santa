@@ -6,8 +6,8 @@ import { redirect } from "next/navigation";
 import { ObjectId, MongoServerError } from "mongodb";
 import { appUrl, isAdminEmail, normalizeEmail } from "./config";
 import { db, getDrawnAt, getEvent } from "./db";
-import { createLoginToken, endSession, recentlySentLink, requireAdmin, requireUser } from "./auth";
-import { drawMail, loginMail, reminderMail, sendMail } from "./mail";
+import { INVITE_TOKEN_DAYS, createLoginToken, endSession, recentlySentLink, requireAdmin, requireUser } from "./auth";
+import { drawMail, inviteMail, loginMail, reminderMail, sendMail } from "./mail";
 
 const MAX_TEXT = 500;
 
@@ -328,6 +328,32 @@ export async function resetDraw(): Promise<void> {
   await users.updateMany({}, { $set: { receiverId: null } });
   await meta.updateOne({ _id: "event" }, { $set: { drawnAt: null } }, { upsert: true });
   back("Losowanie cofnięte. Możesz zmienić listę i losować od nowa.");
+}
+
+export async function sendInvites(): Promise<void> {
+  const admin = await requireAdmin();
+  if (await getDrawnAt()) back("Losowanie już się odbyło — wszyscy dostali maila z wynikiem.");
+  const { users } = await db();
+  const pending = await users.find({ lastLoginAt: null, _id: { $ne: admin._id } }).toArray();
+  if (pending.length === 0) back("Wszyscy już się zalogowali — nie ma kogo zapraszać.");
+  const base = await appUrl();
+  const event = await getEvent();
+  let sent = 0;
+  for (const person of pending) {
+    try {
+      const token = await createLoginToken(person._id, INVITE_TOKEN_DAYS * 24 * 60);
+      await sendMail(person.email, inviteMail(person.name, admin.name, `${base}/api/auth/verify?token=${token}`, base, event));
+      await users.updateOne({ _id: person._id }, { $set: { invitedAt: new Date() } });
+      sent++;
+    } catch (err) {
+      console.error(`Nie wysłano zaproszenia do ${person.email}`, err);
+    }
+  }
+  back(
+    sent === pending.length
+      ? `Wysłano zaproszenia: ${sent}.`
+      : `Wysłano zaproszenia: ${sent} z ${pending.length}. Sprawdź adresy pozostałych osób.`,
+  );
 }
 
 export async function sendReminders(): Promise<void> {

@@ -19,7 +19,9 @@ function newToken(): string {
   return randomBytes(32).toString("base64url");
 }
 
-export async function createLoginToken(userId: ObjectId): Promise<string> {
+export const INVITE_TOKEN_DAYS = 14;
+
+export async function createLoginToken(userId: ObjectId, minutes = LOGIN_TOKEN_MINUTES): Promise<string> {
   const { loginTokens } = await db();
   const token = newToken();
   const now = new Date();
@@ -27,7 +29,7 @@ export async function createLoginToken(userId: ObjectId): Promise<string> {
     tokenHash: hash(token),
     userId,
     createdAt: now,
-    expiresAt: new Date(now.getTime() + LOGIN_TOKEN_MINUTES * 60_000),
+    expiresAt: new Date(now.getTime() + minutes * 60_000),
   });
   return token;
 }
